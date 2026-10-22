@@ -1,0 +1,78 @@
+/* ============================================================
+   Theme CSS — 색상 및 폰트 정의 (이 파일만 교체하면 테마 변경)
+   - 백오피스 theme(color.primary/secondary, font.koMain/koSub/enMain)와 매핑
+   - 원본 reset.css 의 @import / @font-face 를 전부 이곳으로 통합했다
+
+   ⚠️ standalone(실제 페이지)은 이 파일을 그대로 쓰고 JSON 으로 덮어쓰지 않는다.
+      homepage.customFields.theme 을 적용하는 applyThemeVariables() 는
+      백오피스 preview 에서만 호출된다 (t-template-C / D2 와 동일 규약).
+      특히 theme.font.enMain 은 null 로 오는 경우가 많아, 로고·장식 제목의
+      실제 서체는 아래 --font-en-main 기본값이 결정한다.
+   ============================================================ */
+
+/* ===== Fonts ===== */
+/* ko-main : 한글 제목·라벨 (원본 .land_btm p / .about_txt_box strong 서체) */
+@import url('https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@200;300;400;500;600;700;900&display=swap');
+/* ko-sub  : 한글 본문 — 백오피스 theme.font.koSub 가 실제로 내려주는 서체와 동일하게 맞춘다 */
+@import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.min.css');
+/* en-main : 로고·장식 제목 (필기체) */
+@import url('https://fonts.googleapis.com/css2?family=Alex+Brush&display=swap');
+
+:root {
+  /* ===== Colors (백오피스에서 변경 가능) ===== */
+  /* primary = 밝은 배경 톤 / secondary = 진한 브랜드 포인트
+     형제 템플릿(C·D·D2·E·F·L) 및 백오피스 실제 값과 동일한 관례다.
+     백오피스 예시: { primary: "#F9F8F6", secondary: "#373737" } */
+  --color-primary: #f9f8f6; /* 밝은 바탕 면 — .sub_cate_wrap 등 */
+  /* ⚠️ parallax 구간의 조상(#wrap / #container / .main_spe)에 배경을 주면
+     .parallax-mirror(z-index:-100)가 가려져 이미지가 통째로 사라진다. */
+  --color-secondary: #c3a87f; /* 브랜드 포인트 — .logo2 / 예약버튼 / aside 배경 / main_pic 배경 */
+  /* 투명도 파생은 CSS 상대색으로: rgb(from var(--color-primary) r g b / 0.5) */
+
+  /* ===== Fonts ===== */
+  --font-ko-main: 'Noto Serif KR', serif; /* 한글 메인(명조 제목/라벨) */
+  --font-ko-sub: 'Pretendard', sans-serif; /* 한글 서브(본문 기본) */
+  --font-en-main: 'Alex Brush', serif; /* 영문 메인(장식 스크립트/로고) */
+}
+
+/* ============================================================
+   폰트 역할 배분 (styles/style.css 가 참조)
+   원칙: 원본 사이트가 "필기체"(KyoboHandwriting / Alex Brush / Pinyon Script)를
+         쓴 자리에만 en-main 을 넣는다. 원본이 명조(Lora / Nanum Myeongjo /
+         Noto Serif KR)였던 자리는 ko-main 이다.
+
+   --font-en-main  원본 필기체 + 한글이 들어오지 않는 자리
+                   .header .logo / .logo a / .logo a b / .logo2 a   (property.nameEn)
+                   .main_visual .main_txt_top strong                 (property.nameEn)
+                   .main_pic .pic_title                              (property.nameEn)
+                   .main_title h3        (정적 영문 Room's Preview / Special Point …)
+                   .sub_title h3         (정적 영문)
+                   .main_landscape .land_btm strong  (정적 영문 Landscape / Memories…)
+
+   --font-ko-main  (a) 원본이 명조였던 자리
+                   #wrap .sub_visual .txt_box h3        (Lora / 정적 영문 ABOUT)
+                   .sub_visual_wide .main_txt_top strong (Lora / 객실명·시설명)
+                   .sub_title3 h3                       (Lora / 정적 영문 Information)
+                   .sub_about .about_img:before         (Lora / 정적 영문 WELCOME,)
+                   .sub_room .txt_box strong            (Lora / 객실)
+                   .sub_title2 h3                       (Nanum Myeongjo / 객실명·시설명)
+                   .main_landscape .land_btm p          (Noto Serif KR / 한글)
+                   .sub_about .about_txt_box strong     (Noto Serif KR / main.hero.title)
+
+                   (b) 원본은 필기체였으나 한글이 들어올 수 있는 자유입력 제목.
+                       필기체는 한글 글리프가 없어 generic serif 로 떨어지므로 제외한다.
+                   .main_spe .spe_in_txt .txt_box strong      (부대시설명)
+                   .main_pic .txt_box strong                  (index.closing.title)
+                   .sub_about .spe_in_txt .txt_box strong     (main.about[].title)
+                   .sub_room .parallax-window .txt_box strong (객실 제목)
+
+   --font-ko-sub   제목이 아닌 한글 본문 전부 (reset.css 가 body 에 지정)
+                   .header .logo span                         (숙소 한글명)
+                   .main_txt_top p / .main_spe .txt_box p     (hero 문구 / 시설 설명)
+                   .t03 (객실 구조) / .notice_txt / .table_default th·td / .table_text
+                   .reserve_info dd / .travel_list p / .map_info dd / .footer .address
+
+   그대로 둔 것 — 원본의 정적 영문 라벨 (Arial)
+                   .main_txt_top span (WELCOME TO PENSION / Room Information)
+                   .main_room .swiper-slide .t04 (Read More)
+   ============================================================ */
