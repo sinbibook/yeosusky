@@ -167,6 +167,35 @@
 .header .logo2.is-xlong a {
   font-size: 26px;
 }
+/* 헤더 로고 이미지 — index.gallery 이미지가 있을 때만 (.has-img, header-footer-mapper mapHeaderLogo).
+   없으면 .logo_img 가 숨겨져 지금 텍스트 헤더와 같다.
+   로고 한 장으로 두 자리: 투명 헤더(.logo)는 흰색 반전, 흰 배경(.logo2 = 스크롤·860 이하)은 원래 색.
+   크기는 원본(아그니초시매 200×80, 860 이하 높이 50) 기준 */
+.header .logo .logo_img,
+.header .logo2 .logo_img,
+.header .logo.has-img > a:not(.logo_img),
+.header .logo2.has-img > a:not(.logo_img) {
+  display: none;
+}
+.header .logo.has-img .logo_img,
+.header .logo2.has-img .logo_img {
+  display: block;
+}
+.header .logo .logo_img img,
+.header .logo2 .logo_img img {
+  display: block;
+  width: auto;
+  height: auto;
+  max-height: 80px;
+}
+.header .logo .logo_img img {
+  max-width: 340px;
+  margin: 0 auto;
+  filter: brightness(0) invert(1);
+}
+.header .logo2 .logo_img img {
+  max-width: 260px;
+}
 .header .hd_sns_btn {
   display: none;
 }
@@ -514,6 +543,13 @@
   .header .logo2 img {
     height: 50px;
   }
+  /* 헤더 로고 이미지는 높이를 고정하지 않는다 — 가로로 긴 로고(에벤에셀 250×40)가 늘어나 비율이 깨진다.
+     원본 기준: 아그니초시매 200×80 → 125×50, 에벤에셀 250×40 → 200×32 */
+  .header .logo2 .logo_img img {
+    height: auto;
+    max-height: 50px;
+    max-width: 200px;
+  }
   .header .logo span {
     color: #999;
   }
@@ -779,6 +815,20 @@
 .main_visual .main_txt_top p {
   font-size: 16px;
   line-height: 1.375;
+}
+/* 히어로 로고 — index.essence 이미지가 있을 때만 (index-mapper mapHero 가 .has-logo 를 붙인다).
+   WELCOME 줄·표시명을 숨기고 로고를 띄운다. 크기는 원본(아그니초시매 title.png) 기준
+   PC 420×220 / 모바일 200px 폭. 로고가 없으면 이 규칙은 아무것도 바꾸지 않는다 */
+.main_visual .main_txt_top.has-logo > span,
+.main_visual .main_txt_top.has-logo > strong {
+  display: none;
+}
+.main_visual .main_txt_top .hero_logo img {
+  display: block;
+  width: auto;
+  max-width: min(420px, 80%);
+  max-height: 220px;
+  margin: 0 auto;
 }
 .main_visual .arw_box {
   position: absolute;
@@ -1397,6 +1447,10 @@
   }
   .main_visual .main_txt_top p {
     font-size: 12px;
+  }
+  .main_visual .main_txt_top .hero_logo img {
+    max-width: 200px;
+    max-height: 105px;
   }
   .main_visual .arw_box div {
     width: 30px;
@@ -2641,6 +2695,13 @@
 .month_img {
   text-align: center;
 }
+.month_img img {
+  display: block;
+  width: auto;
+  max-width: 100%;
+  height: auto;
+  margin: 0 auto;
+}
 
 @media only screen and (max-width: 860px) {
   .sub_special {
@@ -2902,7 +2963,7 @@
 /* ── 푸터 농어촌민박사업자 이미지 (템플릿 확장) ─────────────────────
    customFields.footer.ruralStayMark 가 있을 때만 매퍼가 노출한다(마크업 기본 숨김).
    - 농어촌민박사업자 이미지: 푸터 맨 위(전화번호 위) 가운데. 세로형(마크 + 신고번호 박스)이라
-     높이를 고정하고 비율은 이미지에 맡긴다. 신고번호가 읽히도록 모바일에서도 64px 아래로 줄이지 않는다.
+     폭을 고정(PC 180px / 모바일 160px)하고 높이는 비율에 맡긴다. 신고번호가 읽히도록 모바일에서도 160px 아래로 줄이지 않는다.
    - 로고: 주소 아래. 로고가 있을 때만 보인다. */
 .footer_wrap .footer .ft_rural_stay_mark_wrap {
   display: flex;
@@ -2911,10 +2972,15 @@
 }
 .footer_wrap .footer .ft_rural_stay_mark {
   display: block;
-  width: auto;
-  height: 80px;
+  width: 180px;
+  height: auto;
   max-width: 100%;
   object-fit: contain;
+}
+@media only screen and (max-width: 767px) {
+  .footer_wrap .footer .ft_rural_stay_mark {
+    width: 160px;
+  }
 }
 .footer_wrap .footer .ft_logo_wrap {
   display: flex;
@@ -2930,9 +2996,6 @@
   object-fit: contain;
 }
 @media only screen and (max-width: 767px) {
-  .footer_wrap .footer .ft_rural_stay_mark {
-    height: 64px;
-  }
   .footer_wrap .footer .ft_logo_wrap {
     justify-content: flex-start;
   }

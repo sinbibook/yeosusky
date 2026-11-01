@@ -10,9 +10,11 @@
   // 메뉴명은 "펜션소개"고, 페이지 내용은 원본 about.html(펜션소개) + view.html(외경보기)
   // 두 페이지를 합친 구조다. 백오피스 편집 화면이 8개뿐이라 main 하나로 합쳤다.
   //
-  //   property.images[].exterior → 히어로 슬라이더(전부) + WELCOME 배너([0])
-  //   main.hero                  → .about_top 인삿말 (제목 / 본문 / 이미지 3장)
-  //   main.about[]               → Landscape 갤러리 + .main_pic 문구·3분할
+  //   main.hero 이미지           → 히어로 슬라이더(전부) + WELCOME 배너(about_banner, 없으면 [0])
+  //   main.hero 타이틀·설명      → .about_top 인삿말 문구
+  //   main.about[] 조각컷 블록   → .about_top 인삿말 옆 이미지 3장 (이미지 설명 about_greet)
+  //   main.about[] 나머지        → Landscape 갤러리 + .main_pic 문구·3분할
+  //   (예전 크롤 데이터는 외경 = 숙소 외경 칸, 조각컷 = main.hero 이미지 — base-mapper getMainExteriorImages)
   //   index.closing              → 맨 아래 Welcome 밴드 (index / room 과 공유)
   //
   // ⚠️ 히어로의 span/strong(WELCOME TO PENSION / About)과 갤러리 라벨(Landscape)은
@@ -44,9 +46,9 @@
     return (page && page.sections && page.sections[0]) || {};
   };
 
+  // 조각컷 블록은 .about_top 몫이라 .main_pic 블록에서 뺀다
   MainMapper.prototype.getAboutBlocks = function () {
-    var about = this.getSection().about;
-    return Array.isArray(about) ? about : [];
+    return this.getMainAboutBlocks();
   };
 
   // MAPPER: customFields.property.propertyUnameEn / property.nameEn / property.name + [data-property-caption]
@@ -56,11 +58,11 @@
     this.applyPropertyCaptions();
   };
 
-  // MAPPER: property.images[].exterior → 히어로 배경 슬라이더
+  // MAPPER: main.hero.images (배너 마커 제외) → 히어로 배경 슬라이더
   // 히어로 문구(span/strong/p)는 정적이라 여기서 건드리지 않는다.
   MainMapper.prototype.mapHero = function () {
     var self = this;
-    var images = this.getPropertyExteriorImages();
+    var images = this.getMainExteriorImages();
     // 숙소외경이미지가 비면 갤러리 소스(about[] 평탄화)로 폴백해 빈 히어로를 막는다
     if (!images.length) images = this.getLandscapeImages();
 
@@ -85,7 +87,7 @@
     });
   };
 
-  // MAPPER: main.hero.title/description/images → .about_top 인삿말
+  // MAPPER: main.hero.title/description + 조각컷 블록 이미지 → .about_top 인삿말
   // 원본 about.html 상단 블록이다. 제목은 --font-ko-main 30px 슬롯이라 한글 여러 줄이 정상.
   // 이미지는 img01(큰 사진) + img02·03(작은 사진) 3장. 모자라면 앞에서부터 순환한다.
   MainMapper.prototype.mapGreeting = function () {
@@ -104,7 +106,7 @@
       el.style.display = desc ? '' : 'none';
     });
 
-    var images = this.getSelectedImages(hero.images || []);
+    var images = this.getGreetImages();
     document.querySelectorAll('[data-main-hero-images]').forEach(function (box) {
       ['img01', 'img02', 'img03'].forEach(function (cls, idx) {
         var div = box.querySelector('.' + cls);
@@ -115,8 +117,8 @@
     });
   };
 
-  // MAPPER: property.images[].exterior 중 category:'about_banner' → .about_img WELCOME 배너
-  //         (마커가 없는 기존 데이터는 exterior[0])
+  // MAPPER: main.hero.images 중 description:'about_banner' → .about_img WELCOME 배너
+  //         (마커가 없으면 외경 [0]. 예전 데이터는 숙소 외경 칸에서 같은 규칙)
   // ⚠️ background-image 를 직접 주지 않는다 (.parallax-mirror 가 z-index:-100).
   MainMapper.prototype.mapExteriorBanner = function () {
     var banner = this.getExteriorBannerImage();
