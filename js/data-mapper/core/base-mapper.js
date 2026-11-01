@@ -484,11 +484,81 @@
 
   // 배너에 쓸 한 장. 마커가 없으면 종전처럼 외경 이미지 첫 장을 쓴다.
   BaseDataMapper.prototype.getExteriorBannerImage = function () {
-    var marked = this.pickExteriorBanner(this.getPropertyExteriorImages({ raw: true }));
+    var marked = this.pickExteriorBanner(this.getMainExteriorImages({ raw: true }));
     if (marked.length) return marked[0];
-    var images = this.getPropertyExteriorImages();
+    var images = this.getMainExteriorImages();
     if (!images.length) images = this.getLandscapeImages();
     return images[0] || null;
+  };
+
+  // ── 숙소소개(main.html) 이미지 칸 ─────────────────────────
+  // 백오피스 숙소소개 편집 화면 기준으로 담는다 (운영 요청 2026-10).
+  //   메인 소개 섹션(main.hero) 이미지 = 히어로 슬라이더 + WELCOME 배너 (원본 view.html 외경)
+  //   메인 소개 섹션 타이틀·설명       = .about_top 인삿말 문구
+  //   소개 섹션 조각컷 블록             = .about_top 인삿말 옆 이미지 3장 (이미지 설명이 about_greet)
+  //   소개 섹션 나머지 블록             = 외경 갤러리 + .main_pic 문구·3분할 (지금과 같다)
+  //
+  // 예전 크롤 데이터는 외경이 숙소 외경 칸(customFields.property.images 의 property_exterior),
+  // 조각컷이 메인 소개 섹션 이미지에 있다. 조각컷 블록이 없고 숙소 외경 칸에 크롤 외경이 있으면
+  // 예전 배치로 읽어 재임포트 전까지 화면이 그대로다.
+  var GREET_MARK = 'about_greet';
+
+  BaseDataMapper.prototype.getMainSection = function () {
+    var page = this.getPages().main;
+    return (page && page.sections && page.sections[0]) || {};
+  };
+
+  BaseDataMapper.prototype.isGreetBlock = function (block) {
+    return ((block && block.images) || []).some(function (img) {
+      return img && img.description === GREET_MARK;
+    });
+  };
+
+  BaseDataMapper.prototype.getGreetBlock = function () {
+    var about = this.getMainSection().about;
+    return (Array.isArray(about) ? about : []).filter(this.isGreetBlock)[0] || null;
+  };
+
+  // 외경 갤러리 · .main_pic 블록이 쓰는 소개 블록 (조각컷 블록 제외)
+  BaseDataMapper.prototype.getMainAboutBlocks = function () {
+    var self = this;
+    var about = this.getMainSection().about;
+    return (Array.isArray(about) ? about : []).filter(function (block) {
+      return !self.isGreetBlock(block);
+    });
+  };
+
+  BaseDataMapper.prototype.isLegacyMainLayout = function () {
+    if (this.getGreetBlock()) return false;
+    var images = (this.getCustomFields().property || {}).images;
+    return (
+      Array.isArray(images) &&
+      images.some(function (img) {
+        return img && (img.category === 'property_exterior' || isExteriorBanner(img));
+      })
+    );
+  };
+
+  // 숙소소개 외경 (히어로 슬라이더 · WELCOME 배너). options.raw 면 배너 마커 이미지도 포함한다.
+  // 메인 소개 섹션 이미지가 비면 숙소 외경 칸(숙소관리 DB 포함)으로 폴백한다.
+  BaseDataMapper.prototype.getMainExteriorImages = function (options) {
+    if (this.isLegacyMainLayout()) return this.getPropertyExteriorImages(options);
+    var raw = !!(options && options.raw);
+    var hero = this.getMainSection().hero || {};
+    var images = this.getSelectedImages(hero.images || []);
+    if (!raw) images = this.excludeExteriorBanner(images);
+    return images.length ? images : this.getPropertyExteriorImages(options);
+  };
+
+  // .about_top 인삿말 옆 조각컷 3장.
+  // 조각컷 블록 → (예전 데이터) 메인 소개 섹션 이미지 → (블록이 없는 새 데이터) 외경 이미지
+  BaseDataMapper.prototype.getGreetImages = function () {
+    var block = this.getGreetBlock();
+    if (block) return this.getSelectedImages(block.images || []);
+    if (this.isLegacyMainLayout()) {
+      return this.getSelectedImages((this.getMainSection().hero || {}).images || []);
+    }
+    return this.getMainExteriorImages();
   };
 
   // options.raw 가 true 면 배너 마커까지 포함해 원본 배열 그대로 돌려준다.
@@ -531,16 +601,15 @@
   // 원본 사이트의 "외경보기(view.html)" 갤러리 소스.
   // A 는 백오피스 편집 화면이 8개뿐이라 원본의 `펜션소개`+`외경보기` 두 페이지를
   // main.html 하나로 병합했다. 그 안에서 세 소스를 이렇게 나눠 담는다.
-  //   property.images[].exterior = 히어로 슬라이더 + WELCOME 배너
-  //   main.hero                  = 인삿말 (.about_top 제목·본문·이미지 3장)
-  //   main.about[]               = 외경 갤러리 + .main_pic 문구·3분할
+  //   main.hero 이미지            = 히어로 슬라이더 + WELCOME 배너 (위 "숙소소개 이미지 칸")
+  //   main.hero 문구 + 조각컷 블록 = 인삿말 (.about_top 제목·본문·이미지 3장)
+  //   main.about[] (조각컷 블록 제외) = 외경 갤러리 + .main_pic 문구·3분할
   // 따라서 외경 갤러리는 about[] 블록의 이미지를 순서대로 평탄화해 쓴다.
   // index.html 의 Healing Place 도 같은 소스를 본다.
   BaseDataMapper.prototype.getLandscapeImages = function () {
     var self = this;
-    var mainPage = this.getPages().main;
-    var section = (mainPage && mainPage.sections && mainPage.sections[0]) || {};
-    var blocks = Array.isArray(section.about) ? section.about : [];
+    var section = this.getMainSection();
+    var blocks = this.getMainAboutBlocks();
 
     var list = [];
     blocks.forEach(function (block) {
@@ -554,7 +623,9 @@
     if (list.length) return list;
 
     // about[] 이 비어 있을 때만 폴백
-    var heroImages = this.getSelectedImages((section.hero && section.hero.images) || []);
+    var heroImages = this.excludeExteriorBanner(
+      this.getSelectedImages((section.hero && section.hero.images) || [])
+    );
     if (heroImages.length) return heroImages;
 
     return this.getPropertyExteriorImages();

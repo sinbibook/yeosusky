@@ -135,6 +135,24 @@
     // 별도 슬롯을 쓴다 (.pic_title / room 배너 / Hello, 는 영문명 그대로 간다).
     setAllText('[data-index-hero-title]', this.firstText(hero.title, this.getPropertyNameEn()));
 
+    // 히어로 로고: index.essence.images[isSelected][0]
+    // 원본 히어로 문구 자리가 이미지인 숙소(아그니초시매)는 크롤러가 그 이미지를 essence 에 넣는다.
+    // A형은 essence 섹션을 안 쓰므로 그 칸을 로고 칸으로 빌린다. 로고가 있으면 WELCOME 줄·표시명 대신
+    // 로고를 보이고(원본도 WELCOME 줄을 주석 처리했다), 없으면 지금 텍스트 화면 그대로 둔다.
+    var logo = this.getSelectedImages((this.getSection().essence || {}).images || [])[0];
+    var logoAlt = this.firstText(hero.title, this.getPropertyName());
+    document.querySelectorAll('[data-index-hero-logo]').forEach(function (box) {
+      var txtTop = box.closest('.main_txt_top');
+      box.innerHTML = '';
+      box.hidden = !(logo && logo.url);
+      if (txtTop) txtTop.classList.toggle('has-logo', !box.hidden);
+      if (box.hidden) return;
+      var img = document.createElement('img');
+      img.src = logo.url;
+      img.alt = logoAlt;
+      box.appendChild(img);
+    });
+
     // 히어로 보조 문구: hero.description → 폴백 property.subtitle
     // (백오피스 빈 값이 공백 한 칸으로 오므로 firstText 로 걸러낸다)
     var desc = this.firstText(hero.description, this.getProperty().subtitle);

@@ -16,7 +16,7 @@
   RoomMapper.prototype.mapPage = function () {
     var roomtype = this.getCurrentRoomtype();
     var room = roomtype ? this.findRoomById(roomtype.id) : null;
-    // roomtype_interior 는 히어로 슬라이더 / 교차 배너 / 와이드 이미지가 나눠 쓴다
+    // roomtype_interior = 히어로 슬라이더. 조각컷(배너·패럴랙스·와이드)은 컨셉 및 외경 우선 (mapBanners)
     var interiors = roomtype ? this.getRoomtypeImages(roomtype, 'roomtype_interior') : [];
 
     this.mapPropertyNames();
@@ -150,23 +150,34 @@
       });
   };
 
-  // MAPPER: interior 배분 — 교차 배너 2장 / 패럴랙스 1장 / 배너2 2장 / 와이드 1장
+  // 이미지 설명이 자리 표시(room_bnr1:0 등)면 문구가 아니다. 배너 문구로 찍히던 것을 막는다.
+  var SLOT_MARK_RE = /^room_(bnr1|bnr2|parallax|wide):\d+$/;
+
+  // MAPPER: 조각컷 배분 — 교차 배너 2장 / 패럴랙스 1장 / 배너2 2장 / 와이드 1장
+  // 소스: 객실 설정 "컨셉 및 외경"(roomtype_exterior) → 비면 내부 이미지(예전 크롤·직접 만든 객실).
+  //   컨셉 및 외경은 순서(sortOrder)가 곧 자리다: 1·2 배너1 / 3 패럴랙스 / 4·5 배너2 / 6 와이드.
+  //   크롤러가 넣은 사진에는 자리 표시도 있어 표시가 우선이다. 모자라면 앞에서부터 돌려 쓴다.
+  // 히어로 슬라이더 · 목록 썸네일은 그대로 내부 이미지다.
   RoomMapper.prototype.mapBanners = function (roomtype, interiors) {
     var self = this;
     var images = interiors.slice();
-
-    // 원본이 슬롯마다 고른 사진 (객실마다 다르다). 없으면 배열 위치로 폴백한다.
-    var bnr1 = this.pickSlot(images, 'room_bnr1');
-    var bnr2 = this.pickSlot(images, 'room_bnr2');
-    var parallax = this.pickSlot(images, 'room_parallax')[0];
-    var wide = this.pickSlot(images, 'room_wide')[0];
+    var cuts = roomtype
+      ? this.sortRoomtypeImages(this.getRoomtypeImages(roomtype, 'roomtype_exterior'))
+      : [];
 
     if (!images.length && roomtype) {
       images = this.getRoomtypeImages(roomtype, 'roomtype_thumbnail');
     }
+    var pool = cuts.length ? cuts : images;
+
+    // 원본이 슬롯마다 고른 사진 (객실마다 다르다). 없으면 배열 위치로 폴백한다.
+    var bnr1 = this.pickSlot(pool, 'room_bnr1');
+    var bnr2 = this.pickSlot(pool, 'room_bnr2');
+    var parallax = this.pickSlot(pool, 'room_parallax')[0];
+    var wide = this.pickSlot(pool, 'room_wide')[0];
 
     // 교차 배너 #1 — 마커 우선, 없으면 앞 2장 (원본 레이아웃이 li 2개 고정)
-    this.fillSlots('[data-room-bnr-images]', bnr1.length ? bnr1 : images, bnr1.length ? 0 : 0, '객실 이미지');
+    this.fillSlots('[data-room-bnr-images]', bnr1.length ? bnr1 : pool, 0, '객실 이미지');
 
     // 배너 문구는 숙소 영문명 고정이다 (원본 room.html 과 동일).
     // 객실명을 넣지 않는다 — 객실명은 히어로 아래 .sub_title2 h3 에서 이미 크게 노출된다.
@@ -174,14 +185,15 @@
     setAllText('[data-room-bnr-title]', propNameEn);
 
     var desc = this.cleanText(images[0] && images[0].description);
+    if (SLOT_MARK_RE.test(desc)) desc = '';
     document.querySelectorAll('[data-room-bnr-description]').forEach(function (el) {
       // 폴백 문구는 <br> 를 포함한 HTML 이라 이스케이프하지 않는다
       el.innerHTML = desc ? self.nl2br(desc) : self.BNR_FALLBACK_DESC_HTML;
     });
 
-    // 패럴랙스 밴드 — 마커 → interior[2] → 폴백 thumbnail
+    // 패럴랙스 밴드 — 마커 → [2] → [0]
     var parallaxUrl =
-      (parallax && parallax.url) || (images[2] && images[2].url) || (images[0] && images[0].url) || '';
+      (parallax && parallax.url) || (pool[2] && pool[2].url) || (pool[0] && pool[0].url) || '';
     document.querySelectorAll('[data-room-parallax]').forEach(function (el) {
       if (parallaxUrl) {
         // ⚠️ background-image 를 직접 주지 않는다 (.parallax-mirror 가 z-index:-100)
@@ -194,11 +206,11 @@
     // 와이드 이미지 하단 문구 — 원본 카피 "Hello, {nameEn}"
     setAllText('[data-room-hello-title]', propNameEn ? 'Hello, ' + propNameEn : '');
 
-    // 교차 배너 #2 — 마커 우선, 없으면 interior[3..]
-    this.fillSlots('[data-room-gallery]', bnr2.length ? bnr2 : images, bnr2.length ? 0 : 3, '객실 이미지');
-    // 와이드 — 마커 → interior[5]
+    // 교차 배너 #2 — 마커 우선, 없으면 [3..]
+    this.fillSlots('[data-room-gallery]', bnr2.length ? bnr2 : pool, bnr2.length ? 0 : 3, '객실 이미지');
+    // 와이드 — 마커 → [5] → [1]
     document.querySelectorAll('[data-room-wide-image]').forEach(function (el) {
-      var url = (wide && wide.url) || (images[5] && images[5].url) || (images[1] && images[1].url) || '';
+      var url = (wide && wide.url) || (pool[5] && pool[5].url) || (pool[1] && pool[1].url) || '';
       self.setBackground(el, url, '객실 이미지');
     });
   };
