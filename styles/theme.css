@@ -47,11 +47,12 @@
                    .main_pic .pic_title                              (property.nameEn)
                    .main_title h3        (정적 영문 Room's Preview / Special Point …)
                    .sub_title h3         (정적 영문)
+                   .sub_visual_wide .main_txt_top strong (정적 영문 About / Preview)
                    .main_landscape .land_btm strong  (정적 영문 Landscape / Memories…)
 
    --font-ko-main  (a) 원본이 명조였던 자리
                    #wrap .sub_visual .txt_box h3        (Lora / 정적 영문 ABOUT)
-                   .sub_visual_wide .main_txt_top strong (Lora / 객실명·시설명)
+                   .sub_special .sub_visual_wide .main_txt_top strong (Lora / 시설명)
                    .sub_title3 h3                       (Lora / 정적 영문 Information)
                    .sub_about .about_img:before         (Lora / 정적 영문 WELCOME,)
                    .sub_room .txt_box strong            (Lora / 객실)
